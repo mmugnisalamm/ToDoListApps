@@ -1,5 +1,6 @@
 package com.inoi.todolistapps.Fragments;
 
+import android.content.Intent;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
@@ -10,9 +11,32 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.NetworkError;
+import com.android.volley.NoConnectionError;
+import com.android.volley.ParseError;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.ServerError;
+import com.android.volley.TimeoutError;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+import com.inoi.todolistapps.Helpers.Url;
+import com.inoi.todolistapps.MainActivity;
 import com.inoi.todolistapps.R;
+
+import org.json.JSONObject;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -21,6 +45,9 @@ import com.inoi.todolistapps.R;
  */
 public class RegisterFragment extends Fragment {
 
+    EditText etUname, etPass, etEmail;
+
+    Button btnRegister;
     TextView tvLogin;
 
     // TODO: Rename parameter arguments, choose names that match
@@ -69,10 +96,19 @@ public class RegisterFragment extends Fragment {
         // Inflate the layout for this fragment
         View v = inflater.inflate(R.layout.fragment_register, container, false);
 
+        etUname = v.findViewById(R.id.et_name);
+        etPass = v.findViewById(R.id.et_password);
+        etEmail = v.findViewById(R.id.et_email);
+        btnRegister = v.findViewById(R.id.btn_register);
+
         tvLogin = v.findViewById(R.id.tv_login);
 
         tvLogin.setOnClickListener(view -> {
             showFragment(new LoginFragment(), "Login");
+        });
+
+        btnRegister.setOnClickListener(view -> {
+            Register();
         });
 
         return v;
@@ -86,6 +122,83 @@ public class RegisterFragment extends Fragment {
 //            transaction.setCustomAnimations(R.anim.enter_from_left, R.anim.exit_to_right, R.anim.enter_from_right, R.anim.exit_to_left);
             transaction.replace(R.id.container_main, fragment, tag);
             transaction.commit();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    private void Register(){
+        try {
+            String uname = etUname.getText().toString();
+            String pass = etPass.getText().toString();
+            String email = etPass.getText().toString();
+
+
+            JSONObject jsonParam = new JSONObject();
+            try {
+                jsonParam.put("password", uname);
+                jsonParam.put("username", pass);
+                jsonParam.put("email", email);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            java.lang.System.out.println(jsonParam);
+
+            JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, Url.LOGIN, jsonParam, new Response.Listener<JSONObject>() {
+                @Override
+                public void onResponse(JSONObject response) {
+                    try {
+                        String message = response.getString("message");
+                        int status = response.getInt("statusCode");
+                        if (status == 2000) {
+                            getActivity().finish();
+                            startActivity(new Intent(getActivity(), MainActivity.class));
+                        } else {
+                            Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    String message = "";
+                    if (error instanceof TimeoutError || error instanceof NoConnectionError) {
+                        //This indicates that the reuest has either time out or there is no connection
+                        message =  "Tidak Ada Koneksi atau Kehabisan Waktu \n"+error.getMessage();
+                    } else if (error instanceof AuthFailureError) {
+                        //Error indicating that there was an Authentication Failure while performing the request
+                        message ="Kesalahan Otentikasi \n"+error.getMessage();
+                    } else if (error instanceof ServerError) {
+                        //Indicates that the server responded with a error response
+                        message = "Terjadi Kesalahan \n"+error.getMessage();
+                    } else if (error instanceof NetworkError) {
+                        //Indicates that there was network error while performing the request
+                        message ="Jaringan Anda Tidak Stabil \n"+error.getMessage();
+                    } else if (error instanceof ParseError) {
+                        // Indicates that the server response could not be parsed
+                        message = "Server Bermaslah \n"+error.getMessage();
+                    }
+                    Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
+                }
+            }) {
+                @Override
+                public Map<String, String> getHeaders() throws AuthFailureError {
+                    HashMap<String,String> params = new HashMap<String, String>();
+                    return params;
+                }
+            };
+
+            request.setRetryPolicy(new DefaultRetryPolicy(
+                    20000,
+                    DefaultRetryPolicy.DEFAULT_MAX_RETRIES,
+                    DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+            ));
+            RequestQueue requestQueue = Volley.newRequestQueue(getActivity());
+            requestQueue.add(request);
         } catch (Exception e) {
             e.printStackTrace();
         }

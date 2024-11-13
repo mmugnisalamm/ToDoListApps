@@ -1,7 +1,10 @@
 package com.inoi.todolistapps.Fragments;
 
+import static android.content.Context.MODE_PRIVATE;
+
 import android.app.ProgressDialog;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
@@ -13,6 +16,7 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -48,6 +52,8 @@ import java.util.Map;
 public class LoginFragment extends Fragment {
 
     EditText etUname, etPass;
+
+    Button btnLogin;
 
     TextView tvRegister;
 
@@ -99,11 +105,16 @@ public class LoginFragment extends Fragment {
 
         etUname = v.findViewById(R.id.et_username);
         etPass = v.findViewById(R.id.et_password);
+        btnLogin = v.findViewById(R.id.btn_login);
 
         tvRegister = v.findViewById(R.id.tv_register);
 
         tvRegister.setOnClickListener(view -> {
-            showFragment(new RegisterFragment(), "Regigster");
+            showFragment(new RegisterFragment(), "Register");
+        });
+
+        btnLogin.setOnClickListener(view -> {
+            Login();
         });
 
         return v;
@@ -145,6 +156,15 @@ public class LoginFragment extends Fragment {
                         String message = response.getString("message");
                         int status = response.getInt("statusCode");
                         if (status == 2110) {
+                            SharedPreferences sharedPreferences = getActivity().getSharedPreferences("MySharedPref",MODE_PRIVATE);
+                            SharedPreferences.Editor myEdit = sharedPreferences.edit();
+                            myEdit.putString("name", uname);
+
+                            JSONObject data = response.getJSONObject("data");
+                            myEdit.putString("token", data.getString("token"));
+
+                            myEdit.commit();
+
                             getActivity().finish();
                             startActivity(new Intent(getActivity(), MainActivity.class));
                         } else {
